@@ -101,4 +101,4 @@ The script outputs a comprehensive markdown file named `informe_auditoria_comple
 
 ## 🛡️ License
 
-This project is open-source and available under the [MIT License](.LICENSE).
+This project is open-source and available under the [MIT License](LICENSE).
