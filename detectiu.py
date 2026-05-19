@@ -15,10 +15,10 @@ def load_configuration():
 
     # Default fallback values in case the file is missing or corrupted
     defaults = {
-        'CSV_FILE': 'datos.csv',
-        'PLUGIN_NAME': 'elementor',
-        'MIN_WP_VERSION': '6.5',
-        'MIN_PLUGIN_VERSION': '6.0'
+        'CSV_FILE': 'data.csv',
+        'PLUGIN_NAME': 'contact-form-7',
+        'MIN_WP_VERSION': '6.9',
+        'MIN_PLUGIN_VERSION': '6.1.5'
     }
 
     if not os.path.exists(config_file):
@@ -224,4 +224,4 @@ with open('detectiu-audit-report.md', 'w', encoding='utf-8') as file:
     for result in audit_results:
         file.write(f"| {result['url']} | {result['status']} | `{result['wp_version']}` | {result['wp_date']} | `{result['plugin_version']}` | {result['plugin_date']} |\n")
 
-print("\n✅ Complete audit report successfully generated in 'informe_auditoria_completa.md'.")
+print("\n✅ Complete audit report successfully generated in 'detectiu-audit-report.md'.")
