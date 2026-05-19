@@ -52,10 +52,10 @@ On its first execution, the script automatically generates a default `config.ini
 
 ```ini
 [SETTINGS]
-csv_file = datos.csv
-plugin_name = elementor
-min_wp_version = 6.5
-min_plugin_version = 6.0
+csv_file = data.csv
+plugin_name = contact-form-7
+min_wp_version = 6.9
+min_plugin_version = 6.1.5
 
 ```
 
@@ -84,14 +84,14 @@ python3 detectiu.py
    ℹ️ WordPress v6.4.2 found. Fetching official release date...
    ⚠️ Plugin v5.8.7 found. Fetching SVN release date...
    
-✅ Complete audit report successfully generated in 'informe_auditoria_completa.md'.
+✅ Complete audit report successfully generated in 'detectiu-audit-report.md'.
 
 ```
 
 
 ## 📊 Output Report
 
-The script outputs a comprehensive markdown file named `informe_auditoria_completa.md`. It includes a summary table indicating whether the targets are up to date or require technical maintenance:
+The script outputs a comprehensive markdown file named `detectiu-audit-report.md`. It includes a summary table indicating whether the targets are up to date or require technical maintenance:
 
 | Website | Status | WP Version | WP Release Date | Plugin Version | Plugin Release Date |
 | --- | --- | --- | --- | --- | --- |
