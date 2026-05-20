@@ -3,6 +3,7 @@ import requests
 import re
 import os
 from configparser import ConfigParser
+from datetime import datetime
 
 # --- CONFIGURATION LOADER ---
 def load_configuration():
@@ -133,8 +134,38 @@ def detect_plugin_version(base_wp_url, plugin):
         pass
     return "Not installed / Protected"
 
+def detect_footer_year(html_text):
+    """
+    Extracts a 4-digit year from the website text if it is close to copyright symbols 
+    or common footer legal keywords, ignoring HTML attributes, tags, comments, 
+    and raw internal CSS/JS blocks.
+    Returns the year as an integer if found, or None.
+    """
+    try:
+        # Clean up CSS blocks, JS blocks, HTML comments, and structural tags
+        visible_text = re.sub(r'<style[^>]*>[\s\S]*?</style>|<script[^>]*>[\s\S]*?</script>|<[^>]+>', ' ', html_text, flags=re.IGNORECASE)
+        
+        # Keywords typically found in a website footer near the year
+        footer_keywords = r'copyright|©|&copy;|aviso\s+legal|privacidad|cookies|rights\s+reserved'
+        
+        # Finds any year between 2000 and 2029
+        # within 60 characters of a keyword in the cleaned visible text
+        pattern_footer = rf'(?:{footer_keywords})[\s\S]{{0,60}}?\b(20[0-2]\d)\b|\b(20[0-2]\d)\b[\s\S]{{0,60}}?(?:{footer_keywords})'
+        
+        matches = re.findall(pattern_footer, visible_text, re.IGNORECASE)
+        
+        for match in matches:
+            # Extract the non-empty group capturing the year
+            year_str = match[0] if match[0] else match[1]
+            if year_str:
+                return int(year_str)
+                
+    except:
+        pass
+    return None
+
 def audit_client(url):
-    """Performs a full audit on the site: verifies WP, identifies its version and the plugin version."""
+    """Performs a full audit on the site: verifies WP, identifies its version, plugin version, and footer year."""
     if not url or not isinstance(url, str): return None
     if not url.startswith('http'): url = 'http://' + url
     
@@ -155,11 +186,13 @@ def audit_client(url):
             base_wp_url = response_home.url.rstrip('/')
         
         plugin_version = detect_plugin_version(base_wp_url, PLUGIN_NAME)
+        footer_year = detect_footer_year(html_text)
                 
         return {
             'url': response_home.url, 
             'wp_version': wp_version,
-            'plugin_version': plugin_version
+            'plugin_version': plugin_version,
+            'footer_year': footer_year
         }
     except:
         pass
@@ -167,8 +200,10 @@ def audit_client(url):
 
 # --- MAIN EXECUTION ---
 audit_results = []
+current_year = datetime.now().year
+
 print("🚀 Starting automated audit process...")
-print(f"📊 Loaded Criteria -> WP Min: {MIN_WP_VERSION} | Plugin Min: {MIN_PLUGIN_VERSION}")
+print(f"📊 Loaded Criteria -> WP Min: {MIN_WP_VERSION} | Plugin Min: {MIN_PLUGIN_VERSION} | Target Year: {current_year}")
 
 try:
     with open(CSV_FILE, mode='r', encoding='utf-8') as file:
@@ -183,11 +218,14 @@ try:
             if audit_data:
                 current_wp = audit_data['wp_version']
                 current_plugin = audit_data['plugin_version']
+                detected_year = audit_data['footer_year']
                 
                 wp_needs_update = is_outdated(current_wp, MIN_WP_VERSION)
                 plugin_needs_update = is_outdated(current_plugin, MIN_PLUGIN_VERSION)
+                year_is_outdated = detected_year is not None and detected_year < current_year
                 
-                if wp_needs_update or plugin_needs_update:
+                # Check all criteria to flag the lead status
+                if wp_needs_update or plugin_needs_update or year_is_outdated:
                     status_flag = "⚠️ Outdated"
                 else:
                     status_flag = "✅ OK"
@@ -201,6 +239,10 @@ try:
                 if current_plugin != "Not installed / Protected":
                     print(f"   ℹ️ Plugin v{current_plugin} found. Fetching SVN release date...")
                     plugin_date = get_plugin_svn_date(PLUGIN_NAME, current_plugin)
+                
+                year_display = str(detected_year) if detected_year else "Not found"
+                if year_is_outdated:
+                    print(f"   ⚠️ Outdated copyright year detected: {year_display}")
                     
                 audit_results.append({
                     'url': audit_data['url'],
@@ -208,6 +250,7 @@ try:
                     'wp_date': wp_date,
                     'plugin_version': current_plugin,
                     'plugin_date': plugin_date,
+                    'footer_year': year_display,
                     'status': status_flag
                 })
 except FileNotFoundError:
@@ -217,11 +260,11 @@ except FileNotFoundError:
 # --- GENERATE MARKDOWN REPORT ---
 with open('detectiu-audit-report.md', 'w', encoding='utf-8') as file:
     file.write(f"# 🎯 Lead Audit Report (WordPress & {PLUGIN_NAME.capitalize()})\n\n")
-    file.write(f"**Audit Criteria:** WP Min Version: `{MIN_WP_VERSION}` | Plugin Min Version: `{MIN_PLUGIN_VERSION}`\n\n")
-    file.write("| Website | Status | WP Version | WP Release Date | Plugin Version | Plugin Release Date |\n")
-    file.write("| :--- | :--- | :--- | :--- | :--- | :--- |\n")
+    file.write(f"**Audit Criteria:** WP Min Version: `{MIN_WP_VERSION}` | Plugin Min Version: `{MIN_PLUGIN_VERSION}` | Current Year: `{current_year}`\n\n")
+    file.write("| Website | Status | WP Version | WP Release Date | Plugin Version | Plugin Release Date | Footer Year |\n")
+    file.write("| :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n")
     
     for result in audit_results:
-        file.write(f"| {result['url']} | {result['status']} | `{result['wp_version']}` | {result['wp_date']} | `{result['plugin_version']}` | {result['plugin_date']} |\n")
+        file.write(f"| {result['url']} | {result['status']} | `{result['wp_version']}` | {result['wp_date']} | `{result['plugin_version']}` | {result['plugin_date']} | `{result['footer_year']}` |\n")
 
 print("\n✅ Complete audit report successfully generated in 'detectiu-audit-report.md'.")
